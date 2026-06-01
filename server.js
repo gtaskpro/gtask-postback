@@ -24,6 +24,11 @@ app.get("/cpx-postback", async (req, res) => {
     const status = req.query.status;
     const transId = req.query.trans_id;
 
+    console.log("UID:", uid);
+    console.log("Amount:", amount);
+    console.log("Status:", status);
+    console.log("TransID:", transId);
+
     if (status !== "1") {
       return res.send("Ignored");
     }
@@ -37,7 +42,17 @@ app.get("/cpx-postback", async (req, res) => {
 
     const coins = Math.round(amount * 1000);
 
-    await db.collection("users").doc(uid).update({
+    const userRef = db.collection("users").doc(uid);
+    const userDoc = await userRef.get();
+
+    if (!userDoc.exists) {
+      await userRef.set({
+        coins: 0,
+        createdAt: Date.now()
+      });
+    }
+
+    await userRef.update({
       coins: admin.firestore.FieldValue.increment(coins)
     });
 
@@ -45,6 +60,8 @@ app.get("/cpx-postback", async (req, res) => {
       uid,
       amount,
       coins,
+      status,
+      transId,
       createdAt: Date.now()
     });
 
@@ -55,4 +72,6 @@ app.get("/cpx-postback", async (req, res) => {
   }
 });
 
-app.listen(process.env.PORT || 3000);
+app.listen(process.env.PORT || 3000, () => {
+  console.log("Server Running");
+});
